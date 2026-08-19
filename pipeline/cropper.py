@@ -1,0 +1,1 @@
+"""Cắt vùng ảnh của từng người dựa trên Bounding Box."""
