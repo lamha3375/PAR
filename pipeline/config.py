@@ -1,0 +1,55 @@
+from pathlib import Path
+
+# parent.parent = project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+VIDEO_DIR = DATA_DIR / "videos"
+CROP_DIR = DATA_DIR / "crops"
+OUTPUT_DIR = DATA_DIR / "outputs"
+
+VIDEO_DIR.mkdir(parents=True, exist_ok=True)
+CROP_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+YOLO_MODEL_PATH = "yolov8n.pt"
+PERSON_CLASS_ID = 0
+
+# Confidence tối thiểu để giữ detection
+DETECTION_CONFIDENCE = 0.40
+TRACK_LOST_BUFFER = 30
+TRACK_ACTIVATION_THRESHOLD = 0.25
+TRACK_MATCHING_THRESHOLD = 0.80
+TRACKER_FRAME_RATE = 30
+
+CROP_PADDING = 0.05
+MIN_CROP_WIDTH = 20
+MIN_CROP_HEIGHT = 40
+SAVE_CROPS = False
+
+WINDOW_NAME = "TV1 - YOLOv8 + ByteTrack"
+DISPLAY_MAX_WIDTH = 1280
+DISPLAY_MAX_HEIGHT = 720
+BOX_THICKNESS = 2
+FONT_SCALE = 0.6
+FONT_THICKNESS = 2
+
+# Số frame dùng để ổn định attribute
+SMOOTHING_WINDOW_SIZE = 5
+
+# Nếu track biến mất quá số frame này, xóa lịch sử smoothing của track
+SMOOTHING_MAX_MISSING_FRAMES = 30
+
+# FPS dùng khi video không cung cấp FPS hợp lệ
+DEFAULT_VIDEO_FPS = 30.0
+DEFAULT_CAMERA_ID = 0
+
+USE_GPU = True
+# CUDA device
+DEVICE = 0
+
+# Kích thước input YOLO
+YOLO_IMAGE_SIZE = 640
+SHOW_FPS = True
+SHOW_PERSON_COUNT = True
+SHOW_TRACK_ID = True
+SHOW_CONFIDENCE = True

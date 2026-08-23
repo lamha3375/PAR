@@ -1,0 +1,5 @@
+pytest
+ultralytics
+opencv-python
+numpy
+supervision
