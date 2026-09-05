@@ -8,11 +8,8 @@ from pipeline.video_reader import VideoReader
 
 
 def main():
-    reader = VideoReader("data/raw/test.mp4")
-
-    # Nếu muốn webcam:
-    # reader = VideoReader(0)
-
+    reader = VideoReader("tests/Test5.mp4")
+    reader.open()
     while True:
         ret, frame = reader.read()
 

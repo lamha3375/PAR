@@ -1,18 +1,12 @@
-# pipeline/__init__.py
 
-from .pipeline import PersonPipeline
-from .detector import PersonDetector
-from .tracker import PersonTracker
-from .cropper import PersonCropper
-from .video_reader import VideoReader
-from .smoother import AttributeSmoother
-
+from .tracker_smoother import PersonTracker, AttributeSmoother
+from .pipeline import PersonPipeline, process_video_source
+from .threaded_pipeline import ThreadedPersonPipeline
 
 __all__ = [
-    "PersonPipeline",
-    "PersonDetector",
     "PersonTracker",
-    "PersonCropper",
-    "VideoReader",
-    "AttributeSmoother"
+    "AttributeSmoother",
+    "PersonPipeline",
+    "ThreadedPersonPipeline",
+    "process_video_source",
 ]

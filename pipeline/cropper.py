@@ -10,7 +10,6 @@ from .config import (
     MIN_CROP_HEIGHT
 )
 
-
 class PersonCropper:
     def __init__(
         self,

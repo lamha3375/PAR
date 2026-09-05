@@ -1,11 +1,11 @@
 from pathlib import Path
 from typing import Generator, Union
+import threading
+from queue import Queue, Full
 
 import cv2
 
 from .config import DEFAULT_VIDEO_FPS
-
-
 class VideoReader:
 
     def __init__(
@@ -26,6 +26,11 @@ class VideoReader:
             raise RuntimeError(
                 f"Không thể mở source: {self.source}"
             )
+
+        try:
+            self.capture.set(cv2.CAP_PROP_ORIENTATION_AUTO, 1)
+        except Exception:
+            pass
 
         if self.width is not None:
             self.capture.set(
@@ -111,3 +116,65 @@ class VideoReader:
         traceback
     ):
         self.release()
+
+class ThreadedVideoReader(VideoReader):
+
+    def __init__(
+        self,
+        source: Union[int, str, Path],
+        queue_size: int = 2,
+        drop_frames: bool = True,
+        width: int | None = None,
+        height: int | None = None,
+    ):
+        super().__init__(source, width, height)
+        self.queue_size = queue_size
+        self.drop_frames = drop_frames
+        self.frame_queue = Queue(maxsize=queue_size)
+        self.stopped = False
+        self.thread = None
+
+    def start(self):
+        self.open()
+        self.stopped = False
+        self.thread = threading.Thread(
+            target=self._update, name="VideoReaderThread", daemon=True
+        )
+        self.thread.start()
+        return self
+
+    def _update(self):
+        while not self.stopped:
+            if not self.capture.isOpened():
+                break
+
+            ret, frame = self.capture.read()
+            if not ret:
+                self.stopped = True
+                break
+
+            if self.drop_frames:
+                try:
+                    self.frame_queue.put_nowait(frame)
+                except Full:
+                    try:
+                        self.frame_queue.get_nowait()
+                    except:
+                        pass
+                    try:
+                        self.frame_queue.put_nowait(frame)
+                    except Full:
+                        pass
+            else:
+                self.frame_queue.put(frame)
+
+        self.stopped = True
+
+    def is_finished(self) -> bool:
+        return self.stopped and self.frame_queue.empty()
+
+    def release(self):
+        self.stopped = True
+        if self.thread is not None and self.thread.is_alive():
+            self.thread.join(timeout=1.0)
+        super().release()

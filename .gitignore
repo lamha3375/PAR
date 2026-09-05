@@ -22,3 +22,6 @@ models/*.engine
 # OS
 .DS_Store
 Thumbs.db
+
+# Video test
+*.mp4

@@ -26,28 +26,23 @@ MIN_CROP_WIDTH = 20
 MIN_CROP_HEIGHT = 40
 SAVE_CROPS = False
 
-WINDOW_NAME = "TV1 - YOLOv8 + ByteTrack"
+WINDOW_NAME = "YOLOv8 + ByteTrack"
 DISPLAY_MAX_WIDTH = 1280
 DISPLAY_MAX_HEIGHT = 720
 BOX_THICKNESS = 2
 FONT_SCALE = 0.6
 FONT_THICKNESS = 2
 
-# Số frame dùng để ổn định attribute
 SMOOTHING_WINDOW_SIZE = 5
 
-# Nếu track biến mất quá số frame này, xóa lịch sử smoothing của track
 SMOOTHING_MAX_MISSING_FRAMES = 30
 
-# FPS dùng khi video không cung cấp FPS hợp lệ
 DEFAULT_VIDEO_FPS = 30.0
 DEFAULT_CAMERA_ID = 0
 
 USE_GPU = True
-# CUDA device
 DEVICE = 0
 
-# Kích thước input YOLO
 YOLO_IMAGE_SIZE = 640
 SHOW_FPS = True
 SHOW_PERSON_COUNT = True
