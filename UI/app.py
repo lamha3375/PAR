@@ -1,158 +1,111 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import json
+import plotly.express as px
 import sys
 import os
 
-# Kết nối với backend
+# Thêm đường dẫn để import được thư mục backend
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from backend import repository as repo
+from backend.repository import get_all_logs
 
-# Cấu hình trang - Phải để ở dòng đầu tiên
-st.set_page_config(page_title="PAR Dashboard | Nhận diện Thuộc tính", layout="wide", initial_sidebar_state="expanded")
+# Cấu hình trang
+st.set_page_config(page_title="Hệ thống UPAR", layout="wide")
 
-# --- CUSTOM CSS GIÚP GIAO DIỆN CHUYÊN NGHIỆP HƠN ---
-st.markdown("""
-    <style>
-        /* Ẩn menu mặc định và footer của Streamlit */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-    
-        
-        /* Chỉnh style cho nút bấm chính */
-        .stButton>button {
-            background-color: #2c3e50;
-            color: white;
-            border-radius: 8px;
-            height: 45px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        .stButton>button:hover {
-            background-color: #34495e;
-            border-color: #34495e;
-            color: #f1c40f;
-        }
-        
-        /* Chỉnh style cho các con số Metric (KPI) */
-        div[data-testid="stMetricValue"] {
-            font-size: 2rem;
-            color: #2980b9;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-
-# ==========================================
-# KHU VỰC SIDEBAR (THANH ĐIỀU KHIỂN BÊN TRÁI)
-# ==========================================
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/3263/3263390.png", width=60) # Icon minh họa
-    st.title("Bảng Cài đặt")
-    st.markdown("---")
-    
-    st.subheader("1. Cấu hình Đầu vào")
-    source_option = st.radio("Nguồn Dữ liệu:", ("📁 Upload Video", "📷 Live Webcam"))
-    
-    if source_option == "📁 Upload Video":
-        st.file_uploader("Kéo thả file video vào đây", type=["mp4", "avi"])
-        
-    scale_threshold = st.slider("Hệ số Scale Threshold", min_value=0.0, max_value=1.0, value=0.6, step=0.05)
-    
-    st.markdown("---")
-    st.subheader("2. Bộ lọc Dữ liệu")
-    filter_gender = st.selectbox("Giới tính:", ["Tất cả", "Nam", "Nữ"])
-    filter_accessory = st.selectbox("Phụ kiện:", ["Tất cả", "Balo", "Kính", "Túi xách"])
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    # Nút bấm tìm kiếm đặt ở sidebar
-    btn_search = st.button("🔍 Lọc & Truy vấn Dữ liệu", use_container_width=True)
-    
-    st.markdown("---")
-    st.button("▶️ Khởi động AI Pipeline", use_container_width=True, type="primary")
-
-
-# ==========================================
-# KHU VỰC MAIN BODY (HIỂN THỊ CHÍNH)
-# ==========================================
 st.title("HỆ THỐNG NHẬN DIỆN THUỘC TÍNH NGƯỜI")
-st.markdown("Tiến trình: **Đang chờ tín hiệu...** | Tốc độ Pipeline: **0 FPS**")
+st.write("Hệ thống tự động phát hiện, theo vết và nhận diện thuộc tính người từ luồng Video/Webcam.")
 
-# Xử lý Logic khi bấm nút Lọc (Lấy dữ liệu mặc định nếu chưa bấm)
-results = repo.search_attributes(filter_gender, filter_accessory) if btn_search else repo.search_attributes("Tất cả", "Tất cả")
+# ==========================================
+# 1. FORM CHỌN NGUỒN DỮ LIỆU & XỬ LÝ
+# ==========================================
+st.sidebar.header("📺 Chọn Nguồn Dữ Liệu")
+input_source = st.sidebar.radio("Định dạng đầu vào:", ["Mở Webcam (Live)", "Upload File Video"])
 
-# Tiền xử lý dữ liệu để hiển thị
-formatted_data = []
-total_male = 0
-total_female = 0
-
-if results:
-    for row in results:
-        track_id, timestamp, crop_img, attr_json, conf_json = row
-        attrs = json.loads(attr_json) 
+start_processing = False
+if input_source == "Upload File Video":
+    video_file = st.sidebar.file_uploader("Tải lên Video (MP4, AVI, MOV)", type=['mp4', 'avi', 'mov'])
+    if st.sidebar.button("▶️ Chạy Xử Lý Video", type="primary"):
+        if video_file: 
+            start_processing = True
+        else: 
+            st.sidebar.warning("Vui lòng tải video lên trước!")
+else:
+    if st.sidebar.button("▶️ Bật Webcam", type="primary"):
+        start_processing = True
         
-        gender_str = "Nam" if attrs.get("gender") == "Male" else "Nữ"
-        if gender_str == "Nam": total_male += 1
-        else: total_female += 1
-            
-        formatted_data.append({
-            "Track_ID": f"#{track_id:04d}", # Format ID cho đẹp (VD: #0012)
-            "Thời điểm ghi nhận": timestamp,
-            "Giới tính": gender_str,
-            "Phụ kiện": "Kính" if attrs.get("glasses") else ("Balo" if attrs.get("bag") == "Backpack" else "Không có")
-        })
-df = pd.DataFrame(formatted_data)
+st.sidebar.markdown("---")
 
-# --- HIỂN THỊ KPI METRICS ---
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric(label="Tổng số phát hiện", value=len(formatted_data))
-with col2:
-    st.metric(label="Số lượng Nam", value=total_male)
-with col3:
-    st.metric(label="Số lượng Nữ", value=total_female)
-with col4:
-    st.metric(label="Tình trạng Hệ thống", value="Sẵn sàng 🟢")
+# ==========================================
+# 2. BỘ LỌC TÌM KIẾM & NGƯỠNG (THRESHOLD)
+# ==========================================
+st.sidebar.header("🔍 Lọc & Tìm Kiếm")
+# Thanh chỉnh Threshold Scale (theo chuẩn tài liệu)
+threshold = st.sidebar.slider("Ngưỡng tin cậy (Scale Threshold)", 0.0, 1.0, 0.6)
 
-st.markdown("<br>", unsafe_allow_html=True)
+filter_gender = st.sidebar.selectbox("Giới tính", ["Tất cả", "Male", "Female"])
+filter_age = st.sidebar.selectbox("Độ tuổi", ["Tất cả", "Young", "Adult", "Old"])
+filter_color = st.sidebar.selectbox("Màu áo", ["Tất cả", "Black", "Blue", "Brown", "Green", "Grey", "Orange", "Pink", "Purple", "Red", "White", "Yellow", "Other"])
+filter_bag = st.sidebar.selectbox("Phụ kiện (Balo/Túi)", ["Tất cả", "Backpack", "Bag/Handbag", "No Bag"])
+filter_glasses = st.sidebar.selectbox("Kính", ["Tất cả", "Normal Glasses", "Sunglasses", "No Glasses"])
 
-# --- HIỂN THỊ DỮ LIỆU BẰNG TABS ---
-tab1, tab2, tab3 = st.tabs(["📺 Màn hình Giám sát (Live)", "📋 Dữ liệu Chi tiết", "📊 Báo cáo Thống kê"])
+# ==========================================
+# 3. KHU VỰC CHIẾU VIDEO / WEBCAM
+# ==========================================
+st.subheader("🔴 Luồng Theo Dõi Trực Tiếp")
+video_placeholder = st.empty() 
 
-with tab1:
-    st.info("Khu vực này sẽ hiển thị luồng Video trực tiếp khi module pipeline.py được tích hợp.")
-    # Khung giả lập video để UI không bị trống
-    st.markdown("""
-        <div style='background-color: #1e1e1e; height: 400px; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px dashed #555;'>
-            <h3 style='color: #666;'>[ No Signal ]</h3>
-        </div>
-    """, unsafe_allow_html=True)
+if not start_processing:
+    video_placeholder.info("Màn hình đang tắt. Vui lòng chọn nguồn dữ liệu và bấm Bật ở thanh bên trái.")
+else:
+    video_placeholder.warning("Đang kết nối luồng Pipeline YOLOv8 & ByteTrack từ nhóm... (Chờ tích hợp code của Linh)")
 
-with tab2:
-    if not df.empty:
-        # Sử dụng dataframe với giao diện sáng sủa
-        st.dataframe(df, use_container_width=True, height=350, hide_index=True)
+st.markdown("---")
+
+# ==========================================
+# 4. KHU VỰC BIỂU ĐỒ & BẢNG DỮ LIỆU
+# ==========================================
+st.subheader("📊 Báo Cáo Thống Kê Lịch Sử")
+df = get_all_logs()
+
+if not df.empty:
+    # Hàm nhỏ để trích xuất dữ liệu từ chuỗi JSON
+    def extract_attr(json_str, head_name):
+        try:
+            return json.loads(json_str).get(head_name, {}).get('prediction', 'Unknown')
+        except: 
+            return 'Unknown'
+
+    # Tạo các cột dữ liệu ảo để phục vụ lọc và vẽ biểu đồ
+    df['Giới tính'] = df['attributes'].apply(lambda x: extract_attr(x, 'gender'))
+    df['Độ tuổi'] = df['attributes'].apply(lambda x: extract_attr(x, 'age'))
+    df['Màu áo'] = df['attributes'].apply(lambda x: extract_attr(x, 'upper_color'))
+    df['Phụ kiện'] = df['attributes'].apply(lambda x: extract_attr(x, 'bag'))
+    df['Kính'] = df['attributes'].apply(lambda x: extract_attr(x, 'glasses'))
+
+    # Xử lý Logic lọc dữ liệu từ thanh Sidebar
+    if filter_gender != "Tất cả": df = df[df['Giới tính'] == filter_gender]
+    if filter_age != "Tất cả": df = df[df['Độ tuổi'] == filter_age]
+    if filter_color != "Tất cả": df = df[df['Màu áo'] == filter_color]
+    if filter_bag != "Tất cả": df = df[df['Phụ kiện'] == filter_bag]
+    if filter_glasses != "Tất cả": df = df[df['Kính'] == filter_glasses]
+
+    if df.empty:
+        st.warning("Không có đối tượng nào khớp với bộ lọc!")
     else:
-        st.warning("Không có dữ liệu nào khớp với bộ lọc hiện tại.")
-
-with tab3:
-    if not df.empty and len(df) > 0:
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            gender_count = df['Giới tính'].value_counts().reset_index()
-            gender_count.columns = ['Giới tính', 'Số lượng']
-            fig_gender = px.pie(gender_count, values='Số lượng', names='Giới tính', 
-                                title='Tỷ lệ Nam/Nữ', hole=0.4, # Tạo dáng Donut chart (có lỗ ở giữa)
-                                color_discrete_sequence=['#3498db', '#e74c3c'])
+        # Vẽ 3 biểu đồ
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            fig_gender = px.pie(df, names='Giới tính', title="Phân bố Giới tính", hole=0.4, color_discrete_sequence=['#3498db', '#e74c3c'])
             st.plotly_chart(fig_gender, use_container_width=True)
-            
-        with c2:
-            acc_count = df['Phụ kiện'].value_counts().reset_index()
-            acc_count.columns = ['Phụ kiện', 'Số lượng']
-            fig_acc = px.bar(acc_count, x='Phụ kiện', y='Số lượng', 
-                             title='Thống kê Phụ kiện mang theo', text_auto=True,
-                             color='Phụ kiện', color_discrete_sequence=px.colors.qualitative.Pastel)
-            st.plotly_chart(fig_acc, use_container_width=True)
-    else:
-        st.info("Cần có dữ liệu để vẽ biểu đồ.")
+        with col2:
+            fig_age = px.bar(df['Độ tuổi'].value_counts().reset_index(), x='Độ tuổi', y='count', title="Phân bố Độ tuổi")
+            st.plotly_chart(fig_age, use_container_width=True)
+        with col3:
+            fig_bag = px.pie(df, names='Phụ kiện', title="Thống kê Phụ kiện", hole=0.3)
+            st.plotly_chart(fig_bag, use_container_width=True)
+
+        # Hiển thị bảng chi tiết
+        st.subheader("🗄️ Bảng Dữ Liệu Đối Tượng")
+        st.dataframe(df[['Track_ID', 'Timestamp', 'Giới tính', 'Độ tuổi', 'Màu áo', 'Phụ kiện', 'Kính', 'Crop_Image_Path', 'attributes']])
+else:
+    st.info("Cơ sở dữ liệu trống. Hệ thống đang chờ ghi nhận dữ liệu từ luồng Camera/Video...")
